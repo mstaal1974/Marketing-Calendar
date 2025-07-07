@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Chosen Palette: Energetic & Playful -->
-    <!-- Application Structure Plan: The SPA is designed as an interactive dashboard with a drill-down detail view. The core interaction is filtering the 12-month content plan by Quarter and by Channel. Clicking a post idea transitions to a dedicated "detail page" view, replacing the main dashboard content. This structure provides both an overview and a focused deep-dive, enhancing user exploration and understanding. The user flow is: View All -> Select Quarter/Channel -> View Filtered Cards -> Click Post Idea -> View Detail Page (with completion tracking) -> Back to Dashboard. -->
-    <!-- Visualization & Content Choices: 1. Content Themes: Goal: Organize. Viz: Interactive HTML cards. Justification: Cards are modular for displaying themes and post lists. Interaction (JS filtering) makes it dynamic. 2. Post Frequency: Goal: Inform. Viz: Simple HTML stat display (implied by 3-4 posts/week). Justification: Direct number for clarity. 3. Monthly Topics: Goal: Organize. Viz: Clickable HTML list items that transition to a separate detail page. Justification: A list is readable, and a dedicated page provides ample space for detailed text, visual descriptions, and interactive elements (like the completion tickbox) without cluttering the main view. CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <!-- Application Structure Plan: The SPA is designed as an interactive dashboard with drill-down detail views and dedicated performance pages. The core interaction is filtering the 12-month content plan by Quarter and by Channel. Clicking a post idea transitions to a dedicated "detail page" view. A new "Marketing Performance Overview" button navigates to a separate page visualizing post completion by channel. This structure provides a comprehensive overview, focused deep-dives, and performance tracking, enhancing user exploration and understanding. The user flow is: View All -> Select Quarter/Channel -> View Filtered Cards (with new metrics) -> Click Post Idea -> View Detail Page (with completion tracking and editable metrics) -> Back to Dashboard OR Click Performance Button -> View Performance Page -> Back to Dashboard. -->
+    <!-- Visualization & Content Choices: 1. Content Themes: Goal: Organize. Viz: Interactive HTML cards. Justification: Cards are modular for displaying themes and post lists. Interaction (JS filtering) makes it dynamic. 2. Monthly Topics: Goal: Organize. Viz: Clickable HTML list items that transition to a separate detail page. Justification: A list is readable, and a dedicated page provides ample space for detailed text, visual descriptions, and interactive elements (like the completion tickbox and new dropdowns/date selector). 3. Post Completion Tracking: Goal: Inform/Organize. Viz: Strikethrough text with date on main page, checkbox on detail page. Justification: Clear visual indicator of status, date provides context, checkbox for direct interaction. 4. Manually Added Metrics (Developed By, Date Posted): Goal: Inform/Organize. Viz: Dropdown for "Developed By" and Date Selector for "Date Posted" on detail page, text display on main cards. Justification: Provides editable, persistent data for each post, enhancing tracking. 5. Posts by Channel Dashboard: Goal: Compare/Inform. Viz: Bar Chart (Chart.js/Canvas) on a separate page. Justification: A bar chart is excellent for comparing quantitative values (completed vs. total posts) across distinct categories (channels), and a separate page keeps the main dashboard clean. CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <title>Blocksure: Interactive 12-Month Marketing Calendar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -43,7 +43,7 @@
             opacity: 0;
             pointer-events: none;
         }
-        .detail-page-wrapper {
+        .detail-page-wrapper, .performance-page-wrapper {
             transition: transform 0.5s ease-in-out;
             transform: translateX(100%);
             position: absolute;
@@ -55,11 +55,25 @@
             height: 100%;
             overflow-y: auto;
         }
-        .detail-page-wrapper.show-right {
+        .detail-page-wrapper.show-right, .performance-page-wrapper.show-right {
             transform: translateX(0);
             position: relative;
             opacity: 1;
             pointer-events: auto;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px; /* Max width for chart */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base height */
+            max-height: 400px; /* Max height */
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
         }
     </style>
 </head>
@@ -98,6 +112,10 @@
                     </div>
                 </section>
 
+                <section id="performance-button-section" class="mb-10 text-center">
+                    <button onclick="showPerformancePage()" class="bg-[#F94144] hover:bg-[#AE2012] text-white font-bold py-3 px-8 rounded-full transition-colors duration-200 shadow-md">View Marketing Performance Overview</button>
+                </section>
+
                 <section id="content-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
                 </section>
             </main>
@@ -130,9 +148,37 @@
                     <p id="detail-type" class="text-base text-gray-700"></p>
                 </div>
 
-                <div class="flex items-center mt-8 pt-4 border-t border-gray-200">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 pt-4 border-t border-gray-200">
+                    <div>
+                        <label for="developed-by-select" class="block text-lg font-semibold text-gray-700 mb-2">Developed By:</label>
+                        <select id="developed-by-select" class="block w-full p-2 border border-gray-300 rounded-md focus:ring-[#F94144] focus:border-[#F94144]">
+                            <option value="">Select Team/Source</option>
+                            <option value="Blocksure">Blocksure</option>
+                            <option value="Erudithe">Erudithe</option>
+                            <option value="External">External</option>
+                            <option value="A.I.">A.I.</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="manual-date-posted-input" class="block text-lg font-semibold text-gray-700 mb-2">Planned Date Posted:</label>
+                        <input type="date" id="manual-date-posted-input" class="block w-full p-2 border border-gray-300 rounded-md focus:ring-[#F94144] focus:border-[#F94144]">
+                    </div>
+                </div>
+
+                <div class="flex items-center mt-6">
                     <input type="checkbox" id="completed-checkbox" class="h-5 w-5 text-[#F94144] rounded focus:ring-[#F94144] mr-2">
                     <label for="completed-checkbox" class="text-lg font-semibold text-gray-700">Mark as Completed/Posted</label>
+                </div>
+            </div>
+        </div>
+
+        <div id="performance-page" class="performance-page-wrapper bg-F8F9FA p-4 sm:p-6 md:p-8">
+            <div class="container mx-auto bg-white rounded-lg shadow-lg p-6 md:p-8 relative">
+                <button class="absolute top-4 right-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-full transition-colors duration-200" onclick="hidePerformancePage()">Back to Dashboard</button>
+                <h2 class="text-3xl font-bold text-[#434A54] mb-4 text-center">Marketing Performance Overview</h2>
+                <p class="text-md text-[#656D78] mb-6 text-center max-w-2xl mx-auto">Track the progress of your content strategy: see the number of posts completed versus the total planned for each channel.</p>
+                <div class="chart-container">
+                    <canvas id="postsByChannelChart"></canvas>
                 </div>
             </div>
         </div>
@@ -250,6 +296,7 @@
 
         const mainContentWrapper = document.getElementById('main-content-wrapper');
         const postDetailPage = document.getElementById('post-detail-page');
+        const performancePage = document.getElementById('performance-page');
         const contentGrid = document.getElementById('content-grid');
         let currentQuarterFilter = 'all';
         let currentChannelFilter = 'all';
@@ -262,7 +309,11 @@
         const detailVisualsList = document.getElementById('detail-visuals');
         const detailCTA = document.getElementById('detail-cta');
         const detailType = document.getElementById('detail-type');
+        const developedBySelect = document.getElementById('developed-by-select');
+        const manualDatePostedInput = document.getElementById('manual-date-posted-input');
         const completedCheckbox = document.getElementById('completed-checkbox');
+
+        let postsByChannelChart = null;
 
         const renderContent = () => {
             contentGrid.innerHTML = '';
@@ -278,9 +329,19 @@
                 card.dataset.channel = item.channel;
 
                 let postListHtml = item.posts.map((post) => {
-                    const isCompleted = localStorage.getItem(`post_status_${post.id}`) === 'completed';
+                    const postStatus = localStorage.getItem(`post_status_${post.id}`);
+                    const isCompleted = postStatus === 'completed';
+                    const publishedDate = localStorage.getItem(`post_date_${post.id}`);
+                    const developedBy = localStorage.getItem(`post_developed_by_${post.id}`);
+                    const plannedDate = localStorage.getItem(`post_planned_date_${post.id}`);
+                    
                     const completedClass = isCompleted ? 'line-through text-gray-500' : '';
-                    return `<li class="text-[#656D78] mb-1 ${completedClass}"><a href="#" class="post-link" data-post-id="${post.id}" data-card-title="${item.title}" data-card-theme="${item.theme}">${post.title}</a></li>`;
+                    const dateDisplay = publishedDate ? `<span class="text-xs text-gray-400 ml-2">(${publishedDate})</span>` : '';
+                    const developedByDisplay = developedBy ? `<span class="text-xs text-gray-400 ml-2">by ${developedBy}</span>` : '';
+                    const plannedDateDisplay = plannedDate ? `<span class="text-xs text-gray-400 ml-2">Planned: ${plannedDate}</span>` : '';
+
+
+                    return `<li class="text-[#656D78] mb-1 ${completedClass}"><a href="#" class="post-link" data-post-id="${post.id}" data-card-title="${item.title}" data-card-theme="${item.theme}">${post.title}${developedByDisplay}${plannedDateDisplay}${dateDisplay}</a></li>`;
                 }).join('');
 
                 card.innerHTML = `
@@ -333,11 +394,19 @@
                 detailVisualsList.appendChild(li);
             });
 
+            // Load saved "Developed By" and "Planned Date Posted"
+            const savedDevelopedBy = localStorage.getItem(`post_developed_by_${postId}`);
+            developedBySelect.value = savedDevelopedBy || '';
+
+            const savedPlannedDate = localStorage.getItem(`post_planned_date_${postId}`);
+            manualDatePostedInput.value = savedPlannedDate || '';
+
             const isCompleted = localStorage.getItem(`post_status_${postId}`) === 'completed';
             completedCheckbox.checked = isCompleted;
 
             mainContentWrapper.classList.add('hidden-left');
             postDetailPage.classList.add('show-right');
+            performancePage.classList.remove('show-right'); 
             document.body.style.overflow = 'hidden'; 
         };
 
@@ -345,6 +414,21 @@
             mainContentWrapper.classList.remove('hidden-left');
             postDetailPage.classList.remove('show-right');
             document.body.style.overflow = ''; 
+            renderContent(); 
+        };
+
+        const showPerformancePage = () => {
+            mainContentWrapper.classList.add('hidden-left');
+            postDetailPage.classList.remove('show-right'); 
+            performancePage.classList.add('show-right');
+            document.body.style.overflow = 'hidden';
+            renderPostsByChannelChart(); 
+        };
+
+        const hidePerformancePage = () => {
+            mainContentWrapper.classList.remove('hidden-left');
+            performancePage.classList.remove('show-right');
+            document.body.style.overflow = '';
             renderContent(); 
         };
 
@@ -361,6 +445,109 @@
                         currentChannelFilter = e.target.dataset.filter;
                     }
                     renderContent();
+                }
+            });
+        };
+
+        const renderPostsByChannelChart = () => {
+            const channelLabels = ['linkedin', 'social', 'pr', 'sem'];
+            const totalPosts = {};
+            const completedPosts = {};
+
+            channelLabels.forEach(channel => {
+                totalPosts[channel] = 0;
+                completedPosts[channel] = 0;
+            });
+
+            contentData.forEach(item => {
+                totalPosts[item.channel] += item.posts.length;
+                item.posts.forEach(post => {
+                    if (localStorage.getItem(`post_status_${post.id}`) === 'completed') {
+                        completedPosts[item.channel]++;
+                    }
+                });
+            });
+
+            const labels = channelLabels.map(label => label.charAt(0).toUpperCase() + label.slice(1));
+            const totalData = channelLabels.map(channel => totalPosts[channel]);
+            const completedData = channelLabels.map(channel => completedPosts[channel]);
+
+            const ctx = document.getElementById('postsByChannelChart').getContext('2d');
+
+            if (postsByChannelChart) {
+                postsByChannelChart.destroy();
+            }
+
+            postsByChannelChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Total Posts Planned',
+                            data: totalData,
+                            backgroundColor: '#F9C74F', 
+                            borderColor: '#F94144',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Posts Completed/Posted',
+                            data: completedData,
+                            backgroundColor: '#90BE6D', 
+                            borderColor: '#4390E8',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    const item = tooltipItems[0];
+                                    return item.label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Posts',
+                                font: {
+                                    size: 14
+                                }
+                            },
+                            ticks: {
+                                precision: 0,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
                 }
             });
         };
@@ -384,10 +571,26 @@
             completedCheckbox.addEventListener('change', (e) => {
                 if (currentPostId) {
                     if (e.target.checked) {
+                        const today = new Date();
+                        const formattedDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                         localStorage.setItem(`post_status_${currentPostId}`, 'completed');
+                        localStorage.setItem(`post_date_${currentPostId}`, formattedDate);
                     } else {
                         localStorage.removeItem(`post_status_${currentPostId}`);
+                        localStorage.removeItem(`post_date_${currentPostId}`);
                     }
+                }
+            });
+
+            developedBySelect.addEventListener('change', (e) => {
+                if (currentPostId) {
+                    localStorage.setItem(`post_developed_by_${currentPostId}`, e.target.value);
+                }
+            });
+
+            manualDatePostedInput.addEventListener('change', (e) => {
+                if (currentPostId) {
+                    localStorage.setItem(`post_planned_date_${currentPostId}`, e.target.value);
                 }
             });
         });
