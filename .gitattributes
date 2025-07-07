@@ -1,2 +1,165 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Chosen Palette: Energetic & Playful -->
+    <!-- Application Structure Plan: The SPA is designed as an interactive dashboard. The core interaction is filtering the 12-month content plan by Quarter and by Channel. This structure was chosen because the source material is a time-based strategic plan. A dashboard with filters is the most intuitive way for a user (e.g., a marketing manager) to explore, segment, and understand the planned activities for specific periods and channels, rather than a static, linear scroll. The user flow is: View All -> Select Quarter -> View Quarter-Specific Themes -> Select Channel -> View Detailed Post Ideas for that Channel in that Quarter. -->
+    <!-- Visualization & Content Choices: 1. Content Themes: Goal: Organize. Viz: Interactive HTML cards. Justification: Cards are a clear, modular way to display the main theme for each quarter and channel. Interaction (JS filtering) makes it dynamic. 2. Post Frequency: Goal: Inform. Viz: Simple HTML stat display. Justification: A direct number is the clearest way to show post volume. 3. Monthly Topics: Goal: Organize. Viz: Structured HTML lists within the cards. Justification: A simple list is the most readable format for a series of topics. CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <title>Blocksure: Interactive 12-Month Marketing Calendar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F9FA;
+        }
+        .filter-btn {
+            transition: all 0.3s ease;
+        }
+        .filter-btn.active {
+            background-color: #F94144; /* Red */
+            color: white;
+            box-shadow: 0 4px 14px 0 rgba(249, 65, 68, 0.39);
+        }
+        .content-card {
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            will-change: transform, opacity;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-black text-[#434A54] mb-2">Blocksure Marketing Dashboard</h1>
+            <p class="text-lg md:text-xl text-[#656D78] max-w-3xl mx-auto">An interactive 12-month content calendar designed to drive provider onboarding and learner engagement.</p>
+        </header>
+
+        <main>
+            <section id="filters" class="mb-10">
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <div class="mb-6">
+                        <h3 class="text-lg font-bold text-[#F94144] mb-3 text-center sm:text-left">Filter by Quarter</h3>
+                        <div id="quarter-filters" class="flex flex-wrap justify-center sm:justify-start gap-3">
+                            <button data-filter="all" class="filter-btn active font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">All Quarters</button>
+                            <button data-filter="q1" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q1</button>
+                            <button data-filter="q2" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q2</button>
+                            <button data-filter="q3" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q3</button>
+                            <button data-filter="q4" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q4</button>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-[#F94144] mb-3 text-center sm:text-left">Filter by Channel</h3>
+                        <div id="channel-filters" class="flex flex-wrap justify-center sm:justify-start gap-3">
+                            <button data-filter="all" class="filter-btn active font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">All Channels</button>
+                            <button data-filter="linkedin" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">LinkedIn</button>
+                            <button data-filter="social" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Social Media</button>
+                            <button data-filter="pr" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Partnerships & PR</button>
+                            <button data-filter="sem" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">SEM</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="content-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const contentData = [
+            { quarter: 'q1', channel: 'linkedin', title: 'LinkedIn: Q1', theme: 'Introducing Blocksure & Core Value', posts: ['Platform Overview (B2B)', 'Featured Courses (B2C)', 'Verifiable Creds Ed (B2B)', 'Provider Reach (B2B)', 'RSD Importance (B2B)', 'Digital Badge Benefits (B2B)'] },
+            { quarter: 'q1', channel: 'social', title: 'Social Media: Q1', theme: 'Ignite Your Learning Journey', posts: ['Quick Demo Reels', 'Top Course Carousels', 'Interactive Polls', 'Short Testimonials', 'Resume Level-Up Tutorials', 'Compilation Clips'] },
+            { quarter: 'q1', channel: 'pr', title: 'Partnerships & PR: Q1', theme: 'Foundational Announcements & Credibility', posts: ['Press Release: Launch', 'Joint Webinar Promo', 'Feature in EdTech Pub', 'Joint Article on Creds', 'Guest Article: Credibility', 'Call for New Partnerships'] },
+            { quarter: 'q1', channel: 'sem', title: 'SEM: Q1', theme: 'Foundational & High-Intent Capture', posts: ['SEO: B2B Platform Choice', 'SEO: B2C High-Demand Skills', 'Google Ads: Headline/CTA Tests', 'SEO: B2B Platform Features', 'SEO: B2C Emerging Skills', 'Ads: Landing Page Tests'] },
+            
+            { quarter: 'q2', channel: 'linkedin', title: 'LinkedIn: Q2', theme: 'Demonstrating Functionality & Early Wins', posts: ['Case Study: Provider Growth', 'Skill Spotlight: Industry', 'API Integration Deep-Dive', 'RTO Testimonials', 'Automated Badge Issuance', 'Problem Solved Features'] },
+            { quarter: 'q2', channel: 'social', title: 'Social Media: Q2', theme: 'Deep Dive into Skills & Impact', posts: ['Day in the Life Reels', 'Verifiable Creds Infographics', 'Career Coach Q&As', 'Inspirational Quotes', 'Side Hustle Stories', 'Badge Metadata Breakdowns'] },
+            { quarter: 'q2', channel: 'pr', title: 'Partnerships & PR: Q2', theme: 'Expanding Influence & Case Studies', posts: ['Case Study Release', 'Industry Panel Promo', 'Guest Article in HR/L&D Pub', 'Panel Recap', 'Co-branded Whitepaper', 'Partner Collaboration Stories'] },
+            { quarter: 'q2', channel: 'sem', title: 'SEM: Q2', theme: 'Expanding Keyword Reach & Value Prop', posts: ['SEO: B2B Digital Badges', 'SEO: B2C Skill Gaps', 'Ads: B2B Landing Page Opt.', 'SEO: B2B Open Badges', 'SEO: B2C Identify Gaps', 'Ads: B2C Competitor Keywords'] },
+            
+            { quarter: 'q3', channel: 'linkedin', title: 'LinkedIn: Q3', theme: 'Positioning Blocksure as Thought Leader', posts: ['RSDs & Industry Needs', 'Future-Proof Resume (B2C)', 'Webinar Invites', 'AI Resume Demos', 'Course Relevance (B2B)', 'Theory to Practice'] },
+            { quarter: 'q3', channel: 'social', title: 'Social Media: Q3', theme: 'Pathways, Progress & Community', posts: ['Career Mapping Reels', 'UGC Challenge: #BlocksureBadge', 'Common Skill Gaps Carousels', '#BlocksureBadge Reshares', 'Personalized Upskilling Guides', 'Community Spotlights'] },
+            { quarter: 'q3', channel: 'pr', title: 'Partnerships & PR: Q3', theme: 'Thought Leadership & Policy Impact', posts: ['Research Report Release', 'Gov. Summit Presentation', 'Media Interviews: CEO', 'Report Highlights', 'Policy Work Insights', 'New Partnership Announcements'] },
+            { quarter: 'q3', channel: 'sem', title: 'SEM: Q3', theme: 'Authority Building & Problem/Solution', posts: ['SEO: B2B Credentialing Crisis', 'SEO: B2C RSD Importance', 'Ads: Creative Refresh (B2B/B2C)', 'SEO: B2B Blockchain Creds', 'SEO: B2C RSD Job Opps', 'Ads: B2B Ad Extensions'] },
+
+            { quarter: 'q4', channel: 'linkedin', title: 'LinkedIn: Q4', theme: 'Celebrating Growth & Community', posts: ['Year in Review (B2B)', 'Learner Success Stories', 'Partner Spotlights', 'Reflecting on 2025', 'Building Future Together', 'Holiday & New Year Messages'] },
+            { quarter: 'q4', channel: 'social', title: 'Social Media: Q4', theme: 'Future-Proofing & Holiday Learning', posts: ['New Year/New Skills Reels', 'Future Skills Infographics', 'Holiday Learning Polls', 'Appreciation Videos', 'Emerging Skills Forecasts', 'Gift Yourself Skills'] },
+            { quarter: 'q4', channel: 'pr', title: 'Partnerships & PR: Q4', theme: 'Strategic Alliances & Future Vision', posts: ['Major Partnership Announcement', 'Year-End Predictions Contribution', 'Partner Appreciation Event', 'Game Changer Announcement', 'Future Vision Tease'] },
+            { quarter: 'q4', channel: 'sem', title: 'SEM: Q4', theme: 'Seasonal Relevance & Future Outlook', posts: ['SEO: B2B Planning for 2026', 'SEO: B2C New Year Skills', 'Ads: B2C Seasonal Offers', 'SEO: B2B Future of RTOs', 'Ads: B2C New Year Focus', 'Ads: Remarketing Campaigns'] },
+        ];
+
+        const channelColors = {
+            linkedin: 'bg-[#F9C74F]',
+            social: 'bg-[#90BE6D]',
+            pr: 'bg-[#4390E8]',
+            sem: 'bg-[#F9844A]'
+        };
+
+        const contentGrid = document.getElementById('content-grid');
+        let currentQuarterFilter = 'all';
+        let currentChannelFilter = 'all';
+
+        const renderContent = () => {
+            contentGrid.innerHTML = '';
+            const filteredData = contentData.filter(item => 
+                (currentQuarterFilter === 'all' || item.quarter === currentQuarterFilter) &&
+                (currentChannelFilter === 'all' || item.channel === currentChannelFilter)
+            );
+
+            filteredData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'content-card bg-white rounded-lg shadow-lg p-6 flex flex-col';
+                card.dataset.quarter = item.quarter;
+                card.dataset.channel = item.channel;
+
+                let postList = item.posts.map(post => `<li class="text-[#656D78]">${post}</li>`).join('');
+
+                card.innerHTML = `
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-bold text-[#434A54]">${item.title}</h3>
+                            <span class="text-xs font-bold text-white ${channelColors[item.channel]} uppercase px-2 py-1 rounded-full">${item.channel}</span>
+                        </div>
+                        <p class="text-sm font-semibold text-[#F94144] mb-2">Theme: ${item.theme}</p>
+                        <p class="text-sm font-semibold text-gray-500 mb-3">Weekly Post Ideas (3-4 posts/week):</p>
+                        <ul class="list-disc list-inside space-y-1 mb-4">
+                            ${postList}
+                        </ul>
+                    </div>
+                    <div class="text-right text-xs font-bold text-gray-400 mt-4">${item.quarter.toUpperCase()}</div>
+                `;
+                contentGrid.appendChild(card);
+            });
+        };
+
+        const setupFilters = (filterContainerId, filterStateKey) => {
+            const container = document.getElementById(filterContainerId);
+            container.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    container.querySelector('.active').classList.remove('active');
+                    e.target.classList.add('active');
+                    
+                    if (filterStateKey === 'quarter') {
+                        currentQuarterFilter = e.target.dataset.filter;
+                    } else if (filterStateKey === 'channel') {
+                        currentChannelFilter = e.target.dataset.filter;
+                    }
+                    renderContent();
+                }
+            });
+        };
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            renderContent();
+            setupFilters('quarter-filters', 'quarter');
+            setupFilters('channel-filters', 'channel');
+        });
+    </script>
+</body>
+</html>
