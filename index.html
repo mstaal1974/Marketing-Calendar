@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Chosen Palette: Energetic & Playful -->
-    <!-- Application Structure Plan: The SPA is designed as an interactive dashboard. The core interaction is filtering the 12-month content plan by Quarter and by Channel. This structure was chosen because the source material is a time-based strategic plan. A dashboard with filters is the most intuitive way for a user (e.g., a marketing manager) to explore, segment, and understand the planned activities for specific periods and channels, rather than a static, linear scroll. The user flow is: View All -> Select Quarter -> View Quarter-Specific Themes -> Select Channel -> View Detailed Post Ideas for that Channel in that Quarter. -->
-    <!-- Visualization & Content Choices: 1. Content Themes: Goal: Organize. Viz: Interactive HTML cards. Justification: Cards are a clear, modular way to display the main theme for each quarter and channel. Interaction (JS filtering) makes it dynamic. 2. Post Frequency: Goal: Inform. Viz: Simple HTML stat display. Justification: A direct number is the clearest way to show post volume. 3. Monthly Topics: Goal: Organize. Viz: Structured HTML lists within the cards. Justification: A simple list is the most readable format for a series of topics. CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <!-- Application Structure Plan: The SPA is designed as an interactive dashboard with a drill-down detail view. The core interaction is filtering the 12-month content plan by Quarter and by Channel. Clicking a post idea transitions to a dedicated "detail page" view, replacing the main dashboard content. This structure provides both an overview and a focused deep-dive, enhancing user exploration and understanding. The user flow is: View All -> Select Quarter/Channel -> View Filtered Cards -> Click Post Idea -> View Detail Page (with completion tracking) -> Back to Dashboard. -->
+    <!-- Visualization & Content Choices: 1. Content Themes: Goal: Organize. Viz: Interactive HTML cards. Justification: Cards are modular for displaying themes and post lists. Interaction (JS filtering) makes it dynamic. 2. Post Frequency: Goal: Inform. Viz: Simple HTML stat display (implied by 3-4 posts/week). Justification: Direct number for clarity. 3. Monthly Topics: Goal: Organize. Viz: Clickable HTML list items that transition to a separate detail page. Justification: A list is readable, and a dedicated page provides ample space for detailed text, visual descriptions, and interactive elements (like the completion tickbox) without cluttering the main view. CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <title>Blocksure: Interactive 12-Month Marketing Calendar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -29,69 +29,216 @@
             transition: transform 0.3s ease, opacity 0.3s ease;
             will-change: transform, opacity;
         }
+        .post-link {
+            cursor: pointer;
+            @apply hover:text-[#F94144] transition-colors duration-200;
+        }
+        .main-content-wrapper {
+            transition: transform 0.5s ease-in-out;
+        }
+        .main-content-wrapper.hidden-left {
+            transform: translateX(-100%);
+            position: absolute;
+            width: 100%;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .detail-page-wrapper {
+            transition: transform 0.5s ease-in-out;
+            transform: translateX(100%);
+            position: absolute;
+            width: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            pointer-events: none;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .detail-page-wrapper.show-right {
+            transform: translateX(0);
+            position: relative;
+            opacity: 1;
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body class="text-gray-800">
 
-    <div class="container mx-auto p-4 sm:p-6 md:p-8">
-        
-        <header class="text-center mb-12">
-            <h1 class="text-4xl md:text-5xl font-black text-[#434A54] mb-2">Blocksure Marketing Dashboard</h1>
-            <p class="text-lg md:text-xl text-[#656D78] max-w-3xl mx-auto">An interactive 12-month content calendar designed to drive provider onboarding and learner engagement.</p>
-        </header>
+    <div class="relative min-h-screen">
+        <div id="main-content-wrapper" class="main-content-wrapper container mx-auto p-4 sm:p-6 md:p-8">
+            <header class="text-center mb-12">
+                <h1 class="text-4xl md:text-5xl font-black text-[#434A54] mb-2">Blocksure Marketing Dashboard</h1>
+                <p class="text-lg md:text-xl text-[#656D78] max-w-3xl mx-auto">An interactive 12-month content calendar designed to drive provider onboarding and learner engagement.</p>
+            </header>
 
-        <main>
-            <section id="filters" class="mb-10">
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <div class="mb-6">
-                        <h3 class="text-lg font-bold text-[#F94144] mb-3 text-center sm:text-left">Filter by Quarter</h3>
-                        <div id="quarter-filters" class="flex flex-wrap justify-center sm:justify-start gap-3">
-                            <button data-filter="all" class="filter-btn active font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">All Quarters</button>
-                            <button data-filter="q1" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q1</button>
-                            <button data-filter="q2" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q2</button>
-                            <button data-filter="q3" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q3</button>
-                            <button data-filter="q4" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q4</button>
+            <main>
+                <section id="filters" class="mb-10">
+                    <div class="bg-white rounded-lg shadow-md p-4">
+                        <div class="mb-6">
+                            <h3 class="text-lg font-bold text-[#F94144] mb-3 text-center sm:text-left">Filter by Quarter</h3>
+                            <div id="quarter-filters" class="flex flex-wrap justify-center sm:justify-start gap-3">
+                                <button data-filter="all" class="filter-btn active font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">All Quarters</button>
+                                <button data-filter="q1" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q1</button>
+                                <button data-filter="q2" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q2</button>
+                                <button data-filter="q3" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q3</button>
+                                <button data-filter="q4" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Q4</button>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-[#F94144] mb-3 text-center sm:text-left">Filter by Channel</h3>
+                            <div id="channel-filters" class="flex flex-wrap justify-center sm:justify-start gap-3">
+                                <button data-filter="all" class="filter-btn active font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">All Channels</button>
+                                <button data-filter="linkedin" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">LinkedIn</button>
+                                <button data-filter="social" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Social Media</button>
+                                <button data-filter="pr" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Partnerships & PR</button>
+                                <button data-filter="sem" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">SEM</button>
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <h3 class="text-lg font-bold text-[#F94144] mb-3 text-center sm:text-left">Filter by Channel</h3>
-                        <div id="channel-filters" class="flex flex-wrap justify-center sm:justify-start gap-3">
-                            <button data-filter="all" class="filter-btn active font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">All Channels</button>
-                            <button data-filter="linkedin" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">LinkedIn</button>
-                            <button data-filter="social" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Social Media</button>
-                            <button data-filter="pr" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">Partnerships & PR</button>
-                            <button data-filter="sem" class="filter-btn font-semibold py-2 px-5 bg-gray-200 text-gray-700 rounded-full">SEM</button>
-                        </div>
-                    </div>
+                </section>
+
+                <section id="content-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+                </section>
+            </main>
+        </div>
+
+        <div id="post-detail-page" class="detail-page-wrapper bg-F8F9FA p-4 sm:p-6 md:p-8">
+            <div class="container mx-auto bg-white rounded-lg shadow-lg p-6 md:p-8 relative">
+                <button class="absolute top-4 right-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-full transition-colors duration-200" onclick="hidePostDetailPage()">Back to Dashboard</button>
+                <h2 id="detail-headline" class="text-3xl font-bold text-[#434A54] mb-4"></h2>
+                <p id="detail-channel-info" class="text-md font-semibold text-[#656D78] mb-1"></p>
+                <p id="detail-quarter-theme" class="text-md font-semibold text-[#F94144] mb-4"></p>
+                
+                <div class="mb-6">
+                    <p class="text-lg font-semibold text-gray-700 mb-2">Content Body:</p>
+                    <p id="detail-body" class="text-base text-gray-700 leading-relaxed"></p>
                 </div>
-            </section>
 
-            <section id="content-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
-            </section>
-        </main>
+                <div class="mb-6">
+                    <p class="text-lg font-semibold text-gray-700 mb-2">Suggested Visuals:</p>
+                    <ul id="detail-visuals" class="list-disc list-inside text-gray-700 space-y-1"></ul>
+                </div>
+
+                <div class="mb-6">
+                    <p class="text-lg font-semibold text-gray-700 mb-2">Call to Action:</p>
+                    <p id="detail-cta" class="text-base text-gray-700"></p>
+                </div>
+                
+                <div class="mb-6">
+                    <p class="text-lg font-semibold text-gray-700 mb-2">Content Type:</p>
+                    <p id="detail-type" class="text-base text-gray-700"></p>
+                </div>
+
+                <div class="flex items-center mt-8 pt-4 border-t border-gray-200">
+                    <input type="checkbox" id="completed-checkbox" class="h-5 w-5 text-[#F94144] rounded focus:ring-[#F94144] mr-2">
+                    <label for="completed-checkbox" class="text-lg font-semibold text-gray-700">Mark as Completed/Posted</label>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         const contentData = [
-            { quarter: 'q1', channel: 'linkedin', title: 'LinkedIn: Q1', theme: 'Introducing Blocksure & Core Value', posts: ['Platform Overview (B2B)', 'Featured Courses (B2C)', 'Verifiable Creds Ed (B2B)', 'Provider Reach (B2B)', 'RSD Importance (B2B)', 'Digital Badge Benefits (B2B)'] },
-            { quarter: 'q1', channel: 'social', title: 'Social Media: Q1', theme: 'Ignite Your Learning Journey', posts: ['Quick Demo Reels', 'Top Course Carousels', 'Interactive Polls', 'Short Testimonials', 'Resume Level-Up Tutorials', 'Compilation Clips'] },
-            { quarter: 'q1', channel: 'pr', title: 'Partnerships & PR: Q1', theme: 'Foundational Announcements & Credibility', posts: ['Press Release: Launch', 'Joint Webinar Promo', 'Feature in EdTech Pub', 'Joint Article on Creds', 'Guest Article: Credibility', 'Call for New Partnerships'] },
-            { quarter: 'q1', channel: 'sem', title: 'SEM: Q1', theme: 'Foundational & High-Intent Capture', posts: ['SEO: B2B Platform Choice', 'SEO: B2C High-Demand Skills', 'Google Ads: Headline/CTA Tests', 'SEO: B2B Platform Features', 'SEO: B2C Emerging Skills', 'Ads: Landing Page Tests'] },
+            { quarter: 'q1', channel: 'linkedin', title: 'LinkedIn: Q1', theme: 'Introducing Blocksure & Core Value', posts: [
+                { id: 'li-q1-p1', title: 'Platform Overview (B2B)', details: { headline: 'Introducing Blocksure: Your New Partner in Microcredential Publishing', body: 'This post will provide a high-level overview of the Blocksure Microcredentials Marketplace, highlighting its core features for training organizations. Focus on ease of use, increased reach, and the value of verifiable credentials. Include a strong call to action for RTOs to explore the platform.', cta: 'Learn More for Providers', visuals: ['Clean UI screenshot', 'Short explainer video intro'], type: 'LinkedIn Post/Article' }},
+                { id: 'li-q1-p2', title: 'Featured Courses (B2C)', details: { headline: 'Unlock Your Career Potential: Explore Our First Microcredentials!', body: 'Showcase 1-2 featured microcredential courses available on Blocksure. Highlight popular categories like AI or Cybersecurity. Encourage users to browse the growing selection and find their next skill.', cta: 'Explore Courses Now', visuals: ['Carousel of course cards', 'Engaging animated GIF'], type: 'LinkedIn Carousel/Post' }},
+                { id: 'li-q1-p3', title: 'Verifiable Creds Education (B2B)', details: { headline: 'Why Verifiable Credentials Matter for Your Training Organization\'s Reputation', body: 'An educational piece explaining the importance of Open Badges and Rich Skill Descriptors (RSDs) in building trust and recognition for training programs. Position Blocksure as the solution for issuing secure, industry-recognized credentials.', cta: 'Read the Full Article', visuals: ['Infographic on badge benefits', 'Video interview snippet with an expert'], type: 'LinkedIn Article/Post' }},
+                { id: 'li-q1-p4', title: 'UI Demos (Both)', details: { headline: 'Behind the Scenes: A Quick Tour of Blocksure!', body: 'A short video or carousel post demonstrating the intuitive user interface for both providers (uploading courses) and learners (exploring the marketplace). Emphasize simplicity and efficiency.', cta: 'See How It Works', visuals: ['Screen recording video of UI', 'Carousel of app screenshots'], type: 'LinkedIn Video/Carousel' }}
+            ]},
+            { quarter: 'q1', channel: 'social', title: 'Social Media: Q1', theme: 'Ignite Your Learning Journey', posts: [
+                { id: 's-q1-p1', title: 'Quick Demo Reels', details: { headline: 'Skill Gap? No Problem! Find Your Microcredential in 3 Clicks.', body: 'Create fast-paced, engaging reels or TikToks demonstrating how quickly and easily users can search for and find microcredentials on the Blocksure platform. Use trending audio.', cta: 'Start Learning Now', visuals: ['Fast-paced screen recording', 'Text overlays with key steps'], type: 'TikTok/Instagram Reel' }},
+                { id: 's-q1-p2', title: 'Top Course Carousels', details: { headline: 'Top 3 Microcredentials for a Career Boost in 2025!', body: 'Visually appealing carousel posts highlighting 3-5 popular or high-impact microcredentials. Each slide should briefly describe the course and its benefit. Encourage swiping to see more.', cta: 'Swipe to Discover', visuals: ['Visually appealing course cards', 'Short animations'], type: 'Instagram/Facebook Carousel' }},
+                { id: 's-q1-p3', title: 'Interactive Polls', details: { headline: 'What Skill Do You Want to Learn Next? Tell Us!', body: 'Use Instagram/Facebook Stories or regular posts with poll stickers to engage the audience. Ask about their biggest skill gaps, desired future skills, or learning preferences. This helps gather audience insights.', cta: 'Vote Now!', visuals: ['Poll sticker on relevant image', 'Question with options'], type: 'Instagram/Facebook Story/Poll' }},
+                { id: 's-q1-p4', title: 'Short Testimonials', details: { headline: 'Meet [Learner Name]: My Blocksure Success Story So Far!', body: 'Short, authentic video testimonials (15-30 seconds) from early learners who have found value or progress through Blocksure microcredentials. Focus on their enthusiasm and tangible benefits.', cta: 'Share Your Story', visuals: ['User-generated video clips', 'Quote overlays'], type: 'TikTok/Reel/Short Video' }}
+            ]},
+            { quarter: 'q1', channel: 'pr', title: 'Partnerships & PR: Q1', theme: 'Foundational Announcements & Credibility', posts: [
+                { id: 'pr-q1-p1', title: 'Press Release: Launch', details: { headline: 'Blocksure Launches Microcredentials Marketplace to Revolutionize Skills-Based Education', body: 'A formal press release announcing the official launch of the Blocksure Microcredentials Marketplace. Highlight the unique value proposition, target audience, and long-term vision. Distribute to education, business, and tech media.', cta: 'Read the Full Press Release', visuals: ['Blocksure logo', 'Executive headshots'], type: 'Media Release' }},
+                { id: 'pr-q1-p2', title: 'Joint Webinar Promo', details: { headline: 'Join Us: The Role of Verifiable Credentials in Today\'s Workforce (Blocksure x Partner)', body: 'Promote an upcoming joint webinar co-hosted with a key industry association or thought leader. Focus on the value of verifiable credentials and how they\'re shaping the future workforce. Drive registrations.', cta: 'Register for Webinar', visuals: ['Webinar banner', 'Speakers\' headshots'], type: 'Event Promotion' }},
+                { id: 'pr-q1-p3', title: 'Feature in EdTech Pub', details: { headline: 'Blocksure\'s Innovative Approach to Skills Featured in [Education Trade Publication]', body: 'Leverage earned media by sharing a feature article or interview published in a respected education technology or industry trade publication. Highlight key quotes and insights about Blocksure\'s impact.', cta: 'Read the Article', visuals: ['Magazine cover/logo', 'Key quote graphic'], type: 'Media Share/Highlight' }},
+                { id: 'pr-q1-p4', title: 'Initial Partner Shout-outs', details: { headline: 'Welcome Our First Wave of Strategic Blocksure Partners!', body: 'Social media shout-outs and brief posts introducing early adopter training organizations or key strategic partners. Express excitement for collaboration and mutual growth. Include partner tags.', cta: 'Learn About Our Partners', visuals: ['Partner logos collage', 'Brief quote from partner'], type: 'Social Media Announcement' }}
+            ]},
+            { quarter: 'q1', channel: 'sem', title: 'SEM: Q1', theme: 'Foundational & High-Intent Capture', posts: [
+                { id: 'sem-q1-p1', title: 'SEO: B2B Platform Choice', details: { headline: 'How to Choose the Best Microcredential Platform for Your RTO: A Comprehensive Guide', body: 'Develop a long-form, authoritative blog article targeting RTOs actively searching for a platform. Cover key decision factors, features, and how Blocksure excels. Optimize for keywords like "microcredential platform RTO."', cta: 'Read the Full Guide', visuals: ['Blog header image', 'Comparison table'], type: 'SEO Blog Article' }},
+                { id: 'sem-q1-p2', title: 'SEO: B2C High-Demand Skills', details: { headline: 'Top 5 Microcredentials for [High-Demand Industry, e.g., Cybersecurity] in Australia: Boost Your Career', body: 'Create a listicle-style blog post aimed at learners. Identify specific in-demand skills within a relevant industry and list microcredentials on Blocksure that address them. Optimize for related keywords.', cta: 'Explore Cybersecurity Courses', visuals: ['Infographic of skills', 'Course listing excerpts'], type: 'SEO Blog Post' }},
+                { id: 'sem-q1-p3', title: 'Google Ads: Headline/CTA Tests', details: { headline: 'Google Ads: A/B Test Headlines & CTAs for Max Conversion', body: 'For B2B ads, test headlines like "List Your Courses on Blocksure" vs. "Expand RTO Reach: Blocksure". For B2C ads, test "Upskill Now: Microcredentials" vs. "Find Your Next Career Skill." Analyze click-through rates (CTR) and conversion rates (CVR).', cta: 'N/A', visuals: ['Screenshot of ad variations', 'Data comparison chart'], type: 'Paid Ad Optimization' }},
+                { id: 'sem-q1-p4', title: 'Google Ads: B2B/B2C Description A/B Tests', details: { headline: 'Optimizing Ad Descriptions: Clarity vs. Urgency for Blocksure Campaigns', body: 'Test variations in ad descriptions. For B2B: "Seamless microcredential publishing. Attract more learners." vs. "Trusted platform for RTOs. Issue verifiable digital badges." For B2C: "Industry-recognized courses. Earn verifiable digital badges." vs. "Flexible online learning. Boost your employability." Focus on clear, concise messaging.', cta: 'N/A', visuals: ['Screenshot of ad copy', 'Performance metrics'], type: 'Paid Ad Optimization' }}
+            ]},
             
-            { quarter: 'q2', channel: 'linkedin', title: 'LinkedIn: Q2', theme: 'Demonstrating Functionality & Early Wins', posts: ['Case Study: Provider Growth', 'Skill Spotlight: Industry', 'API Integration Deep-Dive', 'RTO Testimonials', 'Automated Badge Issuance', 'Problem Solved Features'] },
-            { quarter: 'q2', channel: 'social', title: 'Social Media: Q2', theme: 'Deep Dive into Skills & Impact', posts: ['Day in the Life Reels', 'Verifiable Creds Infographics', 'Career Coach Q&As', 'Inspirational Quotes', 'Side Hustle Stories', 'Badge Metadata Breakdowns'] },
-            { quarter: 'q2', channel: 'pr', title: 'Partnerships & PR: Q2', theme: 'Expanding Influence & Case Studies', posts: ['Case Study Release', 'Industry Panel Promo', 'Guest Article in HR/L&D Pub', 'Panel Recap', 'Co-branded Whitepaper', 'Partner Collaboration Stories'] },
-            { quarter: 'q2', channel: 'sem', title: 'SEM: Q2', theme: 'Expanding Keyword Reach & Value Prop', posts: ['SEO: B2B Digital Badges', 'SEO: B2C Skill Gaps', 'Ads: B2B Landing Page Opt.', 'SEO: B2B Open Badges', 'SEO: B2C Identify Gaps', 'Ads: B2C Competitor Keywords'] },
-            
-            { quarter: 'q3', channel: 'linkedin', title: 'LinkedIn: Q3', theme: 'Positioning Blocksure as Thought Leader', posts: ['RSDs & Industry Needs', 'Future-Proof Resume (B2C)', 'Webinar Invites', 'AI Resume Demos', 'Course Relevance (B2B)', 'Theory to Practice'] },
-            { quarter: 'q3', channel: 'social', title: 'Social Media: Q3', theme: 'Pathways, Progress & Community', posts: ['Career Mapping Reels', 'UGC Challenge: #BlocksureBadge', 'Common Skill Gaps Carousels', '#BlocksureBadge Reshares', 'Personalized Upskilling Guides', 'Community Spotlights'] },
-            { quarter: 'q3', channel: 'pr', title: 'Partnerships & PR: Q3', theme: 'Thought Leadership & Policy Impact', posts: ['Research Report Release', 'Gov. Summit Presentation', 'Media Interviews: CEO', 'Report Highlights', 'Policy Work Insights', 'New Partnership Announcements'] },
-            { quarter: 'q3', channel: 'sem', title: 'SEM: Q3', theme: 'Authority Building & Problem/Solution', posts: ['SEO: B2B Credentialing Crisis', 'SEO: B2C RSD Importance', 'Ads: Creative Refresh (B2B/B2C)', 'SEO: B2B Blockchain Creds', 'SEO: B2C RSD Job Opps', 'Ads: B2B Ad Extensions'] },
+            { quarter: 'q2', channel: 'linkedin', title: 'LinkedIn: Q2', theme: 'Demonstrating Functionality & Early Wins', posts: [
+                { id: 'li-q2-p1', title: 'Case Study: Provider Growth', details: { headline: 'Case Study Spotlight: How [Early Adopter RTO] Increased Enrollments with Blocksure', body: 'Feature a detailed case study (article or video) demonstrating how a specific RTO or training organization achieved significant growth or efficiency gains after joining Blocksure. Quantify results where possible.', cta: 'Read the Full Story', visuals: ['RTO logo & testimonial quote', 'Growth charts'], type: 'LinkedIn Article/Video' }},
+                { id: 'li-q2-p2', title: 'Skill Spotlight: Industry', details: { headline: 'Skill Spotlight: The Microcredential That\'s Changing [Industry] Careers', body: 'Deep dive into a specific high-demand skill relevant to a particular industry. Showcase a Blocksure microcredential that addresses this skill, explaining its importance and career benefits for learners.', cta: 'Explore [Skill] Courses', visuals: ['Infographic on skill demand', 'Relevant course imagery'], type: 'LinkedIn Post/Infographic' }},
+                { id: 'li-q2-p3', title: 'API Integration Deep-Dive', details: { headline: 'Streamline Your Credentialing: Blocksure\'s Seamless API Integration', body: 'For providers, highlight the technical ease and benefits of Blocksure\'s API for integrating with existing Student Management Systems (SMS) or Learning Management Systems (LMS). Focus on efficiency and automation.', cta: 'Learn About Integrations', visuals: ['API diagram', 'Workflow illustration'], type: 'LinkedIn Post/Article' }},
+                { id: 'li-q2-p4', title: 'RTO Testimonials', details: { headline: 'Hear from [RTO Name]: "Blocksure transformed our reach."', body: 'Short video testimonials from RTO representatives expressing their satisfaction and success with Blocksure. Authentic voices build trust and credibility.', cta: 'Watch More Testimonials', visuals: ['Video clips of RTO reps', 'Quote overlays'], type: 'LinkedIn Video Post' }}
+            ]},
+            { id: 's-q2-p1', quarter: 'q2', channel: 'social', title: 'Social Media: Q2', theme: 'Deep Dive into Skills & Impact', posts: [
+                { id: 's-q2-p1', title: 'Day in the Life Reels', details: { headline: 'Day in the Life: How a Microcredential Changed My Job', body: 'Create engaging reels showing a "day in the life" of someone who acquired a specific microcredential through Blocksure and how it positively impacted their daily work or career trajectory. Relatable content.', cta: 'Find Your Next Skill', visuals: ['Short video clips of daily work', 'Before/After scenarios'], type: 'TikTok/Instagram Reel' }},
+                { id: 's-q2-p2', title: 'Verifiable Creds Infographics', details: { headline: 'The Value of Verifiable Credentials: Why Employers Love Blocksure Badges', body: 'Simple, easy-to-digest infographics explaining the benefits of Blocksure\'s verifiable digital badges for learners (trust, portability) and employers (authentic verification).', cta: 'Learn About Badges', visuals: ['Infographic of badge benefits', 'Icons representing trust/security'], type: 'Instagram/Facebook Infographic' }},
+                { id: 's-q2-p3', title: 'Career Coach Q&As', details: { headline: 'Ask a Career Coach: Your Questions on Upskilling Answered!', body: 'Host live Q&A sessions on Instagram or Facebook with a career coach or industry expert. Answer questions about career transitions, skill demand, and how microcredentials fit in. Promote in advance.', cta: 'Join Our Next Live Q&A', visuals: ['Live session promo graphic', 'Expert headshot'], type: 'Live Social Session' }},
+                { id: 's-q2-p4', title: 'Inspirational Quotes', details: { headline: 'Motivation Monday: "The best investment you can make is in yourself."', body: 'Share uplifting quotes related to learning, growth, and career development. Brand them with Blocksure colors and logo. Use on Mondays to set a positive tone for the week.', cta: 'Start Investing Today', visuals: ['Aesthetic quote graphic', 'Minimalist design'], type: 'Instagram/Facebook Post' }}
+            ]},
+            { quarter: 'q2', channel: 'pr', title: 'Partnerships & PR: Q2', theme: 'Expanding Influence & Case Studies', posts: [
+                { id: 'pr-q2-p1', title: 'Case Study Release', details: { headline: 'New Case Study: How [Successful Provider] Achieved Remarkable Growth with Blocksure', body: 'A formal announcement and distribution of a newly published case study about a successful Blocksure provider. This is a key PR asset to send to education and business media outlets.', cta: 'Download Case Study', visuals: ['Case study cover image', 'Blocksure & Partner logos'], type: 'Media Release/Content Push' }},
+                { id: 'pr-q2-p2', title: 'Industry Panel Promo', details: { headline: 'Blocksure Executive [Name] Joins Industry Panel on "Future of Work & Skills" at [Conference Name]', body: 'Promote an upcoming speaking engagement or panel participation by a Blocksure executive at a relevant industry conference. Highlight the topic and the executive\'s expertise.', cta: 'View Conference Details', visuals: ['Speaker photo & title', 'Conference logo'], type: 'Event Promotion' }},
+                { id: 'pr-q2-p3', title: 'Guest Article in HR/L&D Pub', details: { headline: 'New Guest Article in [HR/L&D Magazine]: "Why HR Leaders Should Embrace Microcredentials" by Blocksure', body: 'Pitch and publish an article in a Human Resources or Learning & Development focused publication. Position Blocksure as a thought leader on skills acquisition and talent management for businesses.', cta: 'Read the Full Article', visuals: ['Magazine cover/logo', 'Key insight quote'], type: 'Guest Editorial/Article' }},
+                { id: 'pr-q2-p4', title: 'Partner Collaboration Stories', details: { headline: 'Building the Future Together: Our Collaboration with [Partner Name] on [Specific Project]', body: 'Share stories or short videos highlighting ongoing collaborations with key partners. Focus on the tangible outcomes of the partnership and how it benefits the broader skills ecosystem.', cta: 'Explore Our Partnerships', visuals: ['Photos of collaboration', 'Joint project outcomes graphic'], type: 'Partner Spotlight/Video' }}
+            ]},
+            { quarter: 'q2', channel: 'sem', title: 'SEM: Q2', theme: 'Expanding Keyword Reach & Value Prop', posts: [
+                { id: 'sem-q2-p1', title: 'SEO: B2B Digital Badges', details: { headline: 'The Benefits of Digital Badges for Training Providers: A Blocksure Perspective on Trust & Portability', body: 'Create an in-depth blog post targeting training providers searching for solutions to issue digital badges. Focus on trust, verifiability, and portability, positioning Blocksure as the ideal platform.', cta: 'Learn About Digital Badges', visuals: ['Infographic on badge benefits', 'Platform feature screenshots'], type: 'SEO Blog Article' }},
+                { id: 'sem-q2-p2', title: 'SEO: B2C Skill Gaps', details: { headline: 'Bridge Your Skill Gap: Microcredentials for Career Advancement and Future-Proofing', body: 'Develop content aimed at learners identifying skill gaps. Provide practical advice and connect it to Blocksure\'s marketplace as the solution for acquiring necessary microcredentials.', cta: 'Find Your Skill Gap Solution', visuals: ['Illustrations of career progression', 'Course category examples'], type: 'SEO Blog Post' }},
+                { id: 'sem-q2-p3', title: 'Google Ads: B2B Landing Page Opt.', details: { headline: 'Optimizing Provider Landing Pages: A/B Testing for Higher Conversion', body: 'Conduct A/B tests on landing pages specifically designed for training providers. Test different layouts, hero sections (video vs. static image), and call-to-action button placements to improve conversion rates for demo requests or sign-ups.', cta: 'N/A', visuals: ['Screenshot of A/B test variations', 'Conversion rate charts'], type: 'Paid Ad Optimization' }},
+                { id: 'sem-q2-p4', title: 'Google Ads: B2C Long-Tail Keywords', details: { headline: 'Expanding Reach: Targeting Niche Learners with Long-Tail Keywords on Google Ads', body: 'Identify and implement long-tail keywords for Google Ads (e.g., "online project management microcredential Australia," "short course data analytics Sydney"). This targets highly specific user intent, leading to more qualified clicks and enrollments.', cta: 'N/A', visuals: ['Keyword list example', 'Ad group structure'], type: 'Paid Ad Optimization' }}
+            ]},
 
-            { quarter: 'q4', channel: 'linkedin', title: 'LinkedIn: Q4', theme: 'Celebrating Growth & Community', posts: ['Year in Review (B2B)', 'Learner Success Stories', 'Partner Spotlights', 'Reflecting on 2025', 'Building Future Together', 'Holiday & New Year Messages'] },
-            { quarter: 'q4', channel: 'social', title: 'Social Media: Q4', theme: 'Future-Proofing & Holiday Learning', posts: ['New Year/New Skills Reels', 'Future Skills Infographics', 'Holiday Learning Polls', 'Appreciation Videos', 'Emerging Skills Forecasts', 'Gift Yourself Skills'] },
-            { quarter: 'q4', channel: 'pr', title: 'Partnerships & PR: Q4', theme: 'Strategic Alliances & Future Vision', posts: ['Major Partnership Announcement', 'Year-End Predictions Contribution', 'Partner Appreciation Event', 'Game Changer Announcement', 'Future Vision Tease'] },
-            { quarter: 'q4', channel: 'sem', title: 'SEM: Q4', theme: 'Seasonal Relevance & Future Outlook', posts: ['SEO: B2B Planning for 2026', 'SEO: B2C New Year Skills', 'Ads: B2C Seasonal Offers', 'SEO: B2B Future of RTOs', 'Ads: B2C New Year Focus', 'Ads: Remarketing Campaigns'] },
+            { quarter: 'q3', channel: 'linkedin', title: 'LinkedIn: Q3', theme: 'Positioning Blocksure as Thought Leader', posts: [
+                { id: 'li-q3-p1', title: 'RSDs & Industry Needs', details: { headline: 'The Power of Rich Skill Descriptors: Aligning Your Courses with Industry Needs', body: 'A thought leadership piece explaining how Blocksure\'s use of Rich Skill Descriptors (RSDs) ensures microcredentials are truly aligned with employer demands, benefiting both providers and learners.', cta: 'Explore RSD Benefits', visuals: ['Infographic of RSD components', 'Flowchart of alignment process'], type: 'LinkedIn Article' }},
+                { id: 'li-q3-p2', title: 'Future-Proof Resume (B2C)', details: { headline: 'Future-Proof Your Resume: Top Skills on the Rise for 2026', body: 'An engaging post for learners, highlighting the essential skills projected to be in high demand. Position Blocksure as the go-to platform to acquire these skills and strengthen their professional profile.', cta: 'Discover Future Skills', visuals: ['Dynamic infographic of skills', 'Short video showcasing Blocksure\'s AI resume reader'], type: 'LinkedIn Infographic/Video' }},
+                { id: 'li-q3-p3', title: 'Webinar Invites', details: { headline: 'Webinar Invite: "Navigating the Australian Skills Landscape" with Blocksure Experts', body: 'Promote an upcoming webinar featuring Blocksure executives or industry experts discussing key trends and challenges in the Australian skills ecosystem. Target both providers and advanced learners.', cta: 'Register for Webinar', visuals: ['Webinar promotional banner', 'Speaker photos'], type: 'LinkedIn Event Promotion' }},
+                { id: 'li-q3-p4', title: 'AI Resume Demos', details: { headline: 'Did You Know? Blocksure\'s AI Resume Reader Can Map Your Skills!', body: 'A short, impactful video or carousel demonstrating the functionality of Blocksure\'s AI Resume Reader. Show how it identifies skills from a resume and maps them to relevant microcredentials or job opportunities.', cta: 'See AI Reader in Action', visuals: ['Screen recording of AI reader use', 'Infographic of AI benefits'], type: 'LinkedIn Video/Carousel' }}
+            ]},
+            { quarter: 'q3', channel: 'social', title: 'Social Media: Q3', theme: 'Pathways, Progress & Community', posts: [
+                { id: 's-q3-p1', title: 'Career Mapping Reels', details: { headline: 'From A to B: Mapping Your Career Path with Blocksure Microcredentials', body: 'Create inspiring reels that visually demonstrate how learners can map out their career progression using Blocksure\'s microcredentials, showing a clear pathway from current skills to desired roles.', cta: 'Map Your Career', visuals: ['Animated career path illustrations', 'Before/After skill sets'], type: 'TikTok/Instagram Reel' }},
+                { id: 's-q3-p2', title: 'UGC Challenge: #BlocksureBadge', details: { headline: 'Show Us Your #BlocksureBadge! Tag Us in Your Success Story!', body: 'Launch a user-generated content (UGC) challenge encouraging learners to share their newly acquired Blocksure digital badges and how they\'re applying their skills. Incentivize participation with features or small prizes.', cta: 'Share Your Badge!', visuals: ['Examples of digital badges', 'User photos holding certifications'], type: 'UGC Campaign/Challenge' }},
+                { id: 's-q3-p3', title: 'Common Skill Gaps Carousels', details: { headline: 'Common Skill Gaps & How to Bridge Them with Microcredentials', body: 'Create engaging carousel posts that identify common skill deficiencies in various industries and offer specific Blocksure microcredentials as solutions. Use a problem-solution format.', cta: 'Find Your Solution', visuals: ['Infographics of skill gaps', 'Related course icons'], type: 'Instagram/Facebook Carousel' }},
+                { id: 's-q3-p4', title: 'Community Spotlights', details: { headline: 'We\'re Celebrating YOU! Community Spotlight on Our Blocksure Learners', body: 'Regularly feature standout learners from the Blocksure community. Share their journey, achievements, and how Blocksure helped them. This fosters community and provides social proof.', cta: 'Join Our Community', visuals: ['Learner photos/quotes', 'Compilation of UGC'], type: 'Instagram/Facebook Post' }}
+            ]},
+            { quarter: 'q3', channel: 'pr', title: 'Partnerships & PR: Q3', theme: 'Thought Leadership & Policy Impact', posts: [
+                { id: 'pr-q3-p1', title: 'Research Report Release', details: { headline: 'Major Release: Blocksure\'s "State of the Microcredential Market" Report is Here!', body: 'Coordinate a significant press release and media outreach campaign for the release of a comprehensive research report on the microcredential market. Position Blocksure as a key data source and thought leader.', cta: 'Download the Full Report', visuals: ['Report cover graphic', 'Key data visualizations from report'], type: 'Media Release/Report Launch' }},
+                { id: 'pr-q3-p2', title: 'Gov. Summit Presentation', details: { headline: 'Blocksure Presents at [Government Summit]: Our Vision for Closing Skill Gaps through Digital Credentials', body: 'Promote Blocksure\'s participation and presentation at a government-level education or workforce development summit. Share key insights, photos, and links to any available recordings or summaries.', cta: 'View Presentation Highlights', visuals: ['Photos from summit', 'Presentation slide snippets'], type: 'Event Recap/Media Share' }},
+                { id: 'pr-q3-p3', title: 'Media Interviews: CEO', details: { headline: 'Watch Now: Blocksure CEO [Name] Discusses Emerging Skill Trends on [News Channel/Podcast]', body: 'Amplify recent media interviews with the Blocksure CEO or other executives. Share links to news segments, podcasts, or online articles where Blocksure\'s insights on the skills economy are featured.', cta: 'Listen/Watch Now', visuals: ['News channel logo', 'CEO headshot'], type: 'Media Feature Promotion' }},
+                { id: 'pr-q3-p4', title: 'New Partnership Announcements', details: { headline: 'Exciting News! Blocksure Partners with [New Partner Name] to Expand Verifiable Credential Adoption', body: 'Formally announce and celebrate new strategic partnerships with major educational institutions, industry associations, or corporate clients. Highlight the mutual benefits and the impact on the skills ecosystem.', cta: 'Learn About Our New Partner', visuals: ['Blocksure & New Partner logos', 'Joint statement quote'], type: 'Joint Press Release/Announcement' }}
+            ]},
+            { quarter: 'q3', channel: 'sem', title: 'SEM: Q3', theme: 'Authority Building & Problem/Solution', posts: [
+                { id: 'sem-q3-p1', title: 'SEO: B2B Credentialing Crisis', details: { headline: 'Solving the Credentialing Crisis: How Blocksure Ensures Verifiability and Trust in Digital Education', body: 'Write an authoritative SEO article addressing the growing concern over the trustworthiness of online credentials. Position Blocksure\'s blockchain-secured, verifiable digital badges as the definitive solution for RTOs.', cta: 'Read About Verifiability', visuals: ['Diagram of blockchain security', 'Trust icons'], type: 'SEO Blog Article' }},
+                { id: 'sem-q3-p2', title: 'SEO: B2C RSD Importance', details: { headline: 'What are Rich Skill Descriptors (RSDs) and Why Do They Matter to Your Career?', body: 'Create an educational SEO-optimized article for learners explaining RSDs in simple terms. Emphasize how RSDs make their skills truly understandable and portable to employers, directly linking to Blocksure\'s marketplace.', cta: 'Understand RSDs Better', visuals: ['Infographic explaining RSDs', 'Career progression illustration'], type: 'SEO Blog Post' }},
+                { id: 'sem-q3-p3', title: 'Google Ads: Creative Refresh (B2B/B2C)', details: { headline: 'Refreshing Ad Creatives: New Visuals and Copy for Enhanced Engagement', body: 'Launch refreshed ad creatives for both B2B and B2C Google Ads. For B2B, use visuals demonstrating simplified provider workflows; for B2C, focus on dynamic visuals highlighting "job-ready skills." Test new copy emphasizing benefits.', cta: 'N/A', visuals: ['New ad creative mockups', 'A/B testing results graph'], type: 'Paid Ad Optimization' }},
+                { id: 'sem-q3-p4', title: 'Google Ads: B2B Ad Extensions', details: { headline: 'Boosting B2B Ad Performance with Strategic Google Ad Extensions', body: 'Implement and optimize various Google Ad extensions for B2B campaigns (e.g., sitelink extensions for "Request Demo," "List Your Courses"; callout extensions for "Verifiable Credentials," "Increased Reach"). This enhances ad visibility and provides more clickable options.', cta: 'N/A', visuals: ['Screenshot of ad with extensions', 'CTR improvement metrics'], type: 'Paid Ad Optimization' }}
+            ]},
+
+            { quarter: 'q4', channel: 'linkedin', title: 'LinkedIn: Q4', theme: 'Celebrating Growth & Community', posts: [
+                { id: 'li-q4-p1', title: 'Year in Review (B2B)', details: { headline: 'A Year of Growth: Blocksure\'s Impact on the Microcredential Ecosystem', body: 'Present a visually appealing infographic or article summarizing Blocksure\'s achievements over the past year, especially for providers. Highlight key milestones, number of providers onboarded, and overall platform growth.', cta: 'See Our Impact', visuals: ['Infographic of annual stats', 'Collage of partner logos'], type: 'LinkedIn Infographic/Article' }},
+                { id: 'li-q4-p2', title: 'Learner Success Stories', details: { headline: 'Learner Success Story: How [Learner Name] Landed Their Dream Job with a Blocksure Microcredential', body: 'Share an in-depth interview or video feature of a Blocksure learner who successfully used their microcredentials to achieve a significant career goal. Focus on their journey and the direct impact of Blocksure.', cta: 'Read/Watch More', visuals: ['Learner photo/video', 'Before/After career path'], type: 'LinkedIn Interview/Video' }},
+                { id: 'li-q4-p3', title: 'Partner Spotlights', details: { headline: 'Partner Spotlight: Collaborating for a Skilled Workforce. Highlighting [Partner Organization]', body: 'Dedicate posts to specific, successful partnerships. Showcase the joint initiatives, shared vision, and the positive outcomes achieved through collaboration with Blocksure.', cta: 'Learn About Our Partners', visuals: ['Joint branding visuals', 'Quotes from partner leadership'], type: 'LinkedIn Partner Spotlight' }},
+                { id: 'li-q4-p4', title: 'Holiday & New Year Messages', details: { headline: 'Wishing You a Prosperous New Year! Get Ready to Achieve New Skill Milestones with Blocksure in 2026.', body: 'Send a heartfelt holiday and New Year\'s message to the Blocksure community (both providers and learners). Thank them for their engagement and express excitement for future growth and learning opportunities.', cta: 'Explore 2026 Opportunities', visuals: ['Festive Blocksure branded graphic', 'Aspirational imagery'], type: 'LinkedIn Seasonal Message' }}
+            ]},
+            { quarter: 'q4', channel: 'social', title: 'Social Media: Q4', theme: 'Future-Proofing & Holiday Learning', posts: [
+                { id: 's-q4-p1', title: 'New Year/New Skills Reels', details: { headline: 'New Year, New Skills: Get Ready for 2026 with Blocksure!', body: 'Create upbeat, aspirational reels encouraging users to set skill-based New Year\'s resolutions. Showcase quick, impactful microcredentials from Blocksure that can help them achieve their goals for 2026.', cta: 'Start Your 2026 Skills Plan', visuals: ['Energetic visuals of learning/achieving', 'Text overlays with goal-setting prompts'], type: 'TikTok/Instagram Reel' }},
+                { id: 's-q4-p2', title: 'Future Skills Infographics', details: { headline: 'The Skills That Will Dominate the Next Decade. Are You Ready?', body: 'Share visually engaging infographics based on research (e.g., WEF report) about future in-demand skills. Position Blocksure as the platform where users can acquire these critical competencies.', cta: 'Discover Future Skills', visuals: ['Data-driven infographics', 'Clean, modern design'], type: 'Instagram/Facebook Infographic' }},
+                { id: 's-q4-p3', title: 'Holiday Learning Polls', details: { headline: 'Holiday Learning: What Microcredential Are You Tackling This Break?', body: 'Use interactive polls in Stories or posts to engage users during holiday periods. Ask about their plans for learning during time off, subtly nudging them towards Blocksure\'s flexible courses.', cta: 'Vote Now!', visuals: ['Holiday-themed imagery with poll', 'Question prompts'], type: 'Instagram/Facebook Story/Poll' }},
+                { id: 's-q4-p4', title: 'Appreciation Videos', details: { headline: 'Thank You, Blocksure Community! Here\'s to a Skilled Future.', body: 'A heartfelt video message from the Blocksure team expressing gratitude to all learners and providers for their support throughout the year. Foster a sense of community and loyalty.', cta: 'Join Our Journey', visuals: ['Compilation of user-generated content', 'Team message video'], type: 'Social Media Video' }}
+            ]},
+            { quarter: 'q4', channel: 'pr', title: 'Partnerships & PR: Q4', theme: 'Strategic Alliances & Future Vision', posts: [
+                { id: 'pr-q4-p1', title: 'Major Partnership Announcement', details: { headline: 'Blocksure and [Large Industry/Education Body] Announce Strategic Partnership to Transform Workforce Development', body: 'A high-impact press release and coordinated media outreach announcing a significant new partnership. Emphasize the scale of impact and the joint vision for a more skilled workforce. Target major business and education news outlets.', cta: 'Read the Full Announcement', visuals: ['Joint press conference photo', 'Logos of both organizations'], type: 'High-Impact Press Release' }},
+                { id: 'pr-q4-p2', title: 'Year-End Predictions Contribution', details: { headline: 'Blocksure Experts Contribute to [Publication Name]\'s Year-End Skills Predictions', body: 'Seek opportunities for Blocksure executives to contribute expert opinions and forecasts to year-end review or "predictions for next year" articles in leading industry publications. Position Blocksure as a key voice in the future of skills.', cta: 'Read the Expert Forecasts', visuals: ['Publication logo', 'Headshot of Blocksure expert'], type: 'Media Contribution/Expert Op-Ed' }},
+                { id: 'pr-q4-p3', title: 'Partner Appreciation Event', details: { headline: 'Highlights from Our Exclusive Partner Appreciation Event!', body: 'Share photos, short videos, and key takeaways from a special event (virtual or in-person) held to thank Blocksure\'s valued partners. This reinforces relationships and showcases a strong ecosystem.', cta: 'Learn About Our Partners', visuals: ['Event photos', 'Testimonial snippets from partners'], type: 'Event Recap/Social Share' }},
+                { id: 'pr-q4-p4', title: 'Future Vision Tease', details: { headline: 'Looking Ahead: Blocksure\'s Vision for 2026 and Beyond', body: 'A forward-looking content piece (could be a short article or video from leadership) teasing exciting upcoming developments, new features, or strategic directions for Blocksure in the coming year. Build anticipation.', cta: 'Stay Tuned for Updates', visuals: ['Concept art for new features', 'Visionary imagery'], type: 'Thought Leadership Tease' }}
+            ]},
+            { quarter: 'q4', channel: 'sem', title: 'SEM: Q4', theme: 'Seasonal Relevance & Future Outlook', posts: [
+                { id: 'sem-q4-p1', title: 'SEO: B2B Planning for 2026', details: { headline: 'Planning for 2026: How Blocksure Supports Your Training Program Growth and Innovation', body: 'Create an SEO-optimized article targeting RTOs and training organizations in their annual planning phase. Position Blocksure as an essential tool for achieving their growth and innovation goals for the upcoming year.', cta: 'Plan Your 2026 Strategy', visuals: ['Calendar/planning visuals', 'Blocksure dashboard screenshot'], type: 'SEO Blog Article' }},
+                { id: 'sem-q4-p2', title: 'SEO: B2C New Year Skills', details: { headline: 'New Year, New Skills: The Most In-Demand Microcredentials for 2026 to Kickstart Your Career', body: 'Develop a highly relevant SEO article for learners focused on New Year\'s resolutions. List top microcredentials on Blocksure that align with predicted in-demand skills for the new year, driving enrollment intent.', cta: 'Kickstart 2026', visuals: ['List of skills', 'Aspirational career imagery'], type: 'SEO Blog Post' }},
+                { id: 'sem-q4-p3', title: 'Google Ads: B2C Seasonal Offers', details: { headline: 'Limited-Time Holiday Discount on Select Microcredentials!', body: 'Run specific Google Ads campaigns promoting holiday or end-of-year discounts on popular microcredentials for learners. Use urgent and enticing copy to drive immediate conversions before the year ends.', cta: 'Claim Your Discount', visuals: ['Holiday-themed ad visuals', 'Discount percentage graphic'], type: 'Paid Ad Campaign' }},
+                { id: 'sem-q4-p4', title: 'Google Ads: Remarketing Campaigns', details: { headline: 'Don\'t Miss Out! Your Dream Skill is Still Within Reach. Explore Blocksure Courses.', body: 'Implement robust remarketing campaigns for both providers and learners. Target users who have visited Blocksure.com.au but not converted, with tailored ad messages addressing their previous interests or abandoned actions.', cta: 'Complete Your Journey', visuals: ['Personalized ad creatives', 'Call-to-action button'], type: 'Paid Ad Campaign' }}
+            ]}
         ];
 
         const channelColors = {
@@ -101,9 +248,21 @@
             sem: 'bg-[#F9844A]'
         };
 
+        const mainContentWrapper = document.getElementById('main-content-wrapper');
+        const postDetailPage = document.getElementById('post-detail-page');
         const contentGrid = document.getElementById('content-grid');
         let currentQuarterFilter = 'all';
         let currentChannelFilter = 'all';
+        let currentPostId = null; 
+
+        const detailHeadline = document.getElementById('detail-headline');
+        const detailChannelInfo = document.getElementById('detail-channel-info');
+        const detailQuarterTheme = document.getElementById('detail-quarter-theme');
+        const detailBody = document.getElementById('detail-body');
+        const detailVisualsList = document.getElementById('detail-visuals');
+        const detailCTA = document.getElementById('detail-cta');
+        const detailType = document.getElementById('detail-type');
+        const completedCheckbox = document.getElementById('completed-checkbox');
 
         const renderContent = () => {
             contentGrid.innerHTML = '';
@@ -118,7 +277,11 @@
                 card.dataset.quarter = item.quarter;
                 card.dataset.channel = item.channel;
 
-                let postList = item.posts.map(post => `<li class="text-[#656D78]">${post}</li>`).join('');
+                let postListHtml = item.posts.map((post) => {
+                    const isCompleted = localStorage.getItem(`post_status_${post.id}`) === 'completed';
+                    const completedClass = isCompleted ? 'line-through text-gray-500' : '';
+                    return `<li class="text-[#656D78] mb-1 ${completedClass}"><a href="#" class="post-link" data-post-id="${post.id}" data-card-title="${item.title}" data-card-theme="${item.theme}">${post.title}</a></li>`;
+                }).join('');
 
                 card.innerHTML = `
                     <div class="flex-grow">
@@ -127,15 +290,62 @@
                             <span class="text-xs font-bold text-white ${channelColors[item.channel]} uppercase px-2 py-1 rounded-full">${item.channel}</span>
                         </div>
                         <p class="text-sm font-semibold text-[#F94144] mb-2">Theme: ${item.theme}</p>
-                        <p class="text-sm font-semibold text-gray-500 mb-3">Weekly Post Ideas (3-4 posts/week):</p>
+                        <p class="text-sm font-semibold text-gray-500 mb-3">Weekly Post Ideas (click for details):</p>
                         <ul class="list-disc list-inside space-y-1 mb-4">
-                            ${postList}
+                            ${postListHtml}
                         </ul>
                     </div>
                     <div class="text-right text-xs font-bold text-gray-400 mt-4">${item.quarter.toUpperCase()}</div>
                 `;
                 contentGrid.appendChild(card);
             });
+        };
+
+        const showPostDetailPage = (postId, cardTitle, cardTheme) => {
+            currentPostId = postId;
+            let postDetails = null;
+            let channelName = '';
+            let quarterName = '';
+
+            for (const item of contentData) {
+                const foundPost = item.posts.find(p => p.id === postId);
+                if (foundPost) {
+                    postDetails = foundPost.details;
+                    channelName = item.channel;
+                    quarterName = item.quarter;
+                    break;
+                }
+            }
+
+            if (!postDetails) return;
+
+            detailHeadline.textContent = postDetails.headline;
+            detailChannelInfo.textContent = `Channel: ${channelName.charAt(0).toUpperCase() + channelName.slice(1)}`;
+            detailQuarterTheme.textContent = `Quarter: ${quarterName.toUpperCase()} - ${cardTheme}`;
+            detailBody.textContent = postDetails.body;
+            detailCTA.textContent = postDetails.cta;
+            detailType.textContent = postDetails.type;
+
+            detailVisualsList.innerHTML = '';
+            postDetails.visuals.forEach(visual => {
+                const li = document.createElement('li');
+                li.textContent = visual;
+                detailVisualsList.appendChild(li);
+            });
+
+            const isCompleted = localStorage.getItem(`post_status_${postId}`) === 'completed';
+            completedCheckbox.checked = isCompleted;
+
+            mainContentWrapper.classList.add('hidden-left');
+            postDetailPage.classList.add('show-right');
+            document.body.style.overflow = 'hidden'; 
+        };
+
+        const hidePostDetailPage = () => {
+            mainContentWrapper.classList.remove('hidden-left');
+            postDetailPage.classList.remove('show-right');
+            document.body.style.overflow = ''; 
+            renderContent(); 
         };
 
         const setupFilters = (filterContainerId, filterStateKey) => {
@@ -159,6 +369,27 @@
             renderContent();
             setupFilters('quarter-filters', 'quarter');
             setupFilters('channel-filters', 'channel');
+
+            contentGrid.addEventListener('click', (e) => {
+                const link = e.target.closest('.post-link');
+                if (link) {
+                    e.preventDefault();
+                    const postId = link.dataset.postId;
+                    const cardTitle = link.dataset.cardTitle;
+                    const cardTheme = link.dataset.cardTheme;
+                    showPostDetailPage(postId, cardTitle, cardTheme);
+                }
+            });
+
+            completedCheckbox.addEventListener('change', (e) => {
+                if (currentPostId) {
+                    if (e.target.checked) {
+                        localStorage.setItem(`post_status_${currentPostId}`, 'completed');
+                    } else {
+                        localStorage.removeItem(`post_status_${currentPostId}`);
+                    }
+                }
+            });
         });
     </script>
 </body>
